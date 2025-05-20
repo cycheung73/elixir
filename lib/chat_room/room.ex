@@ -38,6 +38,11 @@ defmodule ChatRoom.Room do
     Agent.start_link(fn -> %ChatRoom.Room{name: name} end, name: {:via, Registry, {ChatRoom.Registry, name}})
   end
 
+  # {:error, :room_not_found}
+  # {:error, :not_in_room}
+  # {:error, :already_joined}
+  # {:error, :room_already_exists}
+
   def start_chatroom(name) do
     room = get_room(name)
     if ({:error, :room_not_found} == room) do
@@ -99,10 +104,8 @@ defmodule ChatRoom.Room do
     end
   end
 
-  # {:error, :room_not_found}
-  # {:error, :not_in_room}
-  # {:error, :already_joined}
-  # {:error, :room_already_exists}
+  # These are public for now, so I can use them for testing.
+  # Will convert these to private at a later point.
 
   def get(room) do
     Agent.get(room, & &1)

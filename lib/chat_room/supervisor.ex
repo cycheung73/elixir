@@ -5,7 +5,7 @@ defmodule ChatRoom.Supervisor do
     DynamicSupervisor.start_link(ChatRoom.Supervisor, :ok, opts)
   end
 
-  def start_child(name) do
+  def start_chatroom(name) do
     child_specification = {ChatRoom.Room, name}
 
     DynamicSupervisor.start_child(ChatRoom.Supervisor, child_specification)
