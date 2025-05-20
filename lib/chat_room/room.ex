@@ -17,25 +17,29 @@ defmodule ChatRoom.Room do
     messages: [],
   ]
 
-  def add_user(%ChatRoom.Room{name: name, users: users, messages: messages}, user) do
+  defp add_user(%ChatRoom.Room{name: name, users: users, messages: messages}, user) do
     %ChatRoom.Room{name: name, users: MapSet.put(users, user), messages: messages}
   end
 
-  def del_user(%ChatRoom.Room{name: name, users: users, messages: messages}, user) do
+  defp del_user(%ChatRoom.Room{name: name, users: users, messages: messages}, user) do
     %ChatRoom.Room{name: name, users: MapSet.delete(users, user), messages: messages}
   end
 
-  def add_message(%ChatRoom.Room{name: name, users: users, messages: messages}, message) do
+  defp add_message(%ChatRoom.Room{name: name, users: users, messages: messages}, message) do
     %ChatRoom.Room{name: name, users: users, messages: [message | messages]}
   end
 
   @doc """
   Starts a new room.
-
-  `:name` is required.
   """
+  @spec start_link(String.t()) :: Agent.on_start() | {:error, :room_already_exists}
   def start_link(name) do
-    Agent.start_link(fn -> %ChatRoom.Room{name: name} end, name: {:via, Registry, {ChatRoom.Registry, name}})
+    room = get_room(name)
+    if ({:error, :room_not_found} == room) do
+      Agent.start_link(fn -> %ChatRoom.Room{name: name} end, name: {:via, Registry, {ChatRoom.Registry, name}})
+    else
+      {:error, :room_already_exists}
+    end
   end
 
   # {:error, :room_not_found}
@@ -43,41 +47,35 @@ defmodule ChatRoom.Room do
   # {:error, :already_joined}
   # {:error, :room_already_exists}
 
-  def start_chatroom(name) do
-    room = get_room(name)
-    if ({:error, :room_not_found} == room) do
-      start_link([name: name])
-    else
-      {:error, :room_already_exists}
-    end
-  end
-
+  @spec join(String.t(), String.t()) :: :ok | {:error, :room_not_found} | {:error, :already_joined}
   def join(name, user) do
     room = get_room(name)
     if ({:error, :room_not_found} == room) do
       room
     else
       if not in_room?(room, user) do
-	Agent.update(room, &ChatRoom.Room.add_user(&1, user))
+	Agent.update(room, &add_user(&1, user))
       else
 	{:error, :already_joined}
       end
     end
   end
 
+  @spec leave(String.t(), String.t()) :: :ok | {:error, :room_not_found} | {:error, :not_in_room}
   def leave(name, user) do
     room = get_room(name)
     if ({:error, :room_not_found} == room) do
       room
     else
       if in_room?(room, user) do
-	Agent.update(room, &ChatRoom.Room.del_user(&1, user))
+	Agent.update(room, &del_user(&1, user))
       else
 	{:error, :not_in_room}
       end
     end
   end
 
+  @spec get_history(String.t(), String.t()) :: :ok | {:error, :room_not_found} | {:error, :not_in_room}
   def get_history(name, user) do
     room = get_room(name)
     if ({:error, :room_not_found} == room) do
@@ -91,32 +89,30 @@ defmodule ChatRoom.Room do
     end
   end
 
+  @spec send_message(String.t(), String.t(), String.t()) :: :ok | {:error, :room_not_found} | {:error, :not_in_room}
   def send_message(name, user, message) do
     room = get_room(name)
     if ({:error, :room_not_found} == room) do
       room
     else
       if in_room?(room, user) do
-	Agent.update(room, &ChatRoom.Room.add_message(&1, ChatRoom.Message.new(user, message)))
+	Agent.update(room, &add_message(&1, ChatRoom.Message.new(user, message)))
       else
 	{:error, :not_in_room}
       end
     end
   end
 
-  # These are public for now, so I can use them for testing.
-  # Will convert these to private at a later point.
-
-  def get(room) do
+  defp get(room) do
     Agent.get(room, & &1)
   end
 
-  def get_name(room) do
-    %ChatRoom.Room{name: name, users: _users, messages: _messages} = get(room)
-    name
-  end
+  # defp get_name(room) do
+  #   %ChatRoom.Room{name: name, users: _users, messages: _messages} = get(room)
+  #   name
+  # end
 
-  def get_room(name) do
+  defp get_room(name) do
     room_list = Registry.lookup(ChatRoom.Registry, name)
     if (length(room_list) == 0) do
       {:error, :room_not_found}
@@ -125,17 +121,17 @@ defmodule ChatRoom.Room do
     end
   end
 
-  def get_users(room) do
+  defp get_users(room) do
     %ChatRoom.Room{name: _name, users: users, messages: _messages} = get(room)
     users
   end
 
-  def get_messages(room) do
+  defp get_messages(room) do
     %ChatRoom.Room{name: _name, users: _users, messages: messages} = get(room)
     messages
   end
 
-  def in_room?(room, user) do
+  defp in_room?(room, user) do
     MapSet.member?(get_users(room),user)
   end
 

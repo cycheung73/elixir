@@ -14,28 +14,4 @@ defmodule ChatRoom.MessageTest do
     assert ChatRoom.Message.to_string(msg) == "[#{dstr}] #{user}: #{body}"
   end
 
-  test "create new message with bad user" do
-    user = 123
-    body = "Hello, World!"
-    msg = ChatRoom.Message.new(user, body)
-    assert msg == :error
-    assert ChatRoom.Message.to_string(msg) == "Error: Invalid Parameter"
-  end
-
-  test "create new message with bad body" do
-    user = "Chris"
-    body = 45678
-    msg = ChatRoom.Message.new(user, body)
-    assert msg == :error
-    assert ChatRoom.Message.to_string(msg) == "Error: Invalid Parameter"
-  end
-
-  test "create new message with bad user and bad body" do
-    user = 123
-    body = 45678
-    msg = ChatRoom.Message.new(user, body)
-    assert msg == :error
-    assert ChatRoom.Message.to_string(msg) == "Error: Invalid Parameter"
-  end
-
 end

@@ -1,10 +1,12 @@
 defmodule ChatRoom.Supervisor do
   use DynamicSupervisor
 
+  @spec start_link([DynamicSupervisor.init_option() | GenServer.option()]) :: Supervisor.on_start()
   def start_link(opts) do
     DynamicSupervisor.start_link(ChatRoom.Supervisor, :ok, opts)
   end
 
+  @spec start_chatroom(String.t()) :: DynamicSupervisor.on_start_child()
   def start_chatroom(name) do
     child_specification = {ChatRoom.Room, name}
 

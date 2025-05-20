@@ -17,14 +17,9 @@ defmodule ChatRoom.Message do
     body: "",
   ]
 
-  @spec new(String.t(), String.t()) :: Message.t()
+  @spec new(String.t(), String.t()) :: ChatRoom.Message.t()
   def new(user, body) when is_binary(user) and is_binary(body) do
     %ChatRoom.Message{date: DateTime.utc_now(), user: user, body: body}
-  end
-
-  @spec new(any, any) :: :error
-  def new(_, _) do
-    :error
   end
 
   @spec to_string(ChatRoom.Message.t()) :: String.t()
@@ -32,8 +27,4 @@ defmodule ChatRoom.Message do
     Calendar.strftime(date, "[%Y-%m-%d %H:%M:%S UTC] #{user}: #{body}")
   end
 
-  @spec to_string(:error) :: String.t()
-  def to_string(:error) do
-    "Error: Invalid Parameter"
-  end
 end
