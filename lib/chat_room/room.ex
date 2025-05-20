@@ -1,5 +1,5 @@
 defmodule ChatRoom.Room do
-  use Agent, restart: :temporary
+  use GenServer
 
   @typedoc """
   Type that represents ChatRoom.Room struct with :name as String,
@@ -32,11 +32,11 @@ defmodule ChatRoom.Room do
   @doc """
   Starts a new room.
   """
-  @spec start_link(String.t()) :: Agent.on_start() | {:error, :room_already_exists}
+  @spec start_link(String.t()) :: GenServer.on_start() | {:error, :room_already_exists}
   def start_link(name) do
     room = get_room(name)
     if ({:error, :room_not_found} == room) do
-      Agent.start_link(fn -> %ChatRoom.Room{name: name} end, name: {:via, Registry, {ChatRoom.Registry, name}})
+      GenServer.start_link(__MODULE__, name, name: {:via, Registry, {ChatRoom.Registry, name}})
     else
       {:error, :room_already_exists}
     end
@@ -54,7 +54,7 @@ defmodule ChatRoom.Room do
       room
     else
       if not in_room?(room, user) do
-	Agent.update(room, &add_user(&1, user))
+	GenServer.call(room, {:join, user})
       else
 	{:error, :already_joined}
       end
@@ -68,7 +68,7 @@ defmodule ChatRoom.Room do
       room
     else
       if in_room?(room, user) do
-	Agent.update(room, &del_user(&1, user))
+	GenServer.call(room, {:leave, user})
       else
 	{:error, :not_in_room}
       end
@@ -96,7 +96,7 @@ defmodule ChatRoom.Room do
       room
     else
       if in_room?(room, user) do
-	Agent.update(room, &add_message(&1, ChatRoom.Message.new(user, message)))
+	GenServer.call(room, {:send, ChatRoom.Message.new(user, message)})
       else
 	{:error, :not_in_room}
       end
@@ -104,7 +104,7 @@ defmodule ChatRoom.Room do
   end
 
   defp get(room) do
-    Agent.get(room, & &1)
+    GenServer.call(room, {:get})
   end
 
   # defp get_name(room) do
@@ -133,6 +133,26 @@ defmodule ChatRoom.Room do
 
   defp in_room?(room, user) do
     MapSet.member?(get_users(room),user)
+  end
+
+  def init(name) do
+    {:ok, %ChatRoom.Room{name: name}}
+  end
+
+  def handle_call({:get}, _from, chatroom) do
+    {:reply, chatroom, chatroom}
+  end
+
+  def handle_call({:join, user}, _from, chatroom) do
+    {:reply, :ok, add_user(chatroom, user)}
+  end
+
+  def handle_call({:leave, user}, _from, chatroom) do
+    {:reply, :ok, del_user(chatroom, user)}
+  end
+
+  def handle_call({:send, message}, _from, chatroom) do
+    {:reply, :ok, add_message(chatroom, message)}
   end
 
 end
